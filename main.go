@@ -113,8 +113,9 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//unecessary writing of json - for debugging
-	js, err := json.Marshal(selected.Link)
-	w.Write([]byte(js))
+	// js, err := json.Marshal(selected.Link)
+	// w.Write([]byte(js))
+	return
 
 }
 
