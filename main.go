@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 //custom seach CP - https://cse.google.com
@@ -46,11 +48,11 @@ func main() {
 
 	port := ":" + os.Getenv("PORT")
 	if port == ":" {
-		port = ":8080"
+		port = ":9090"
 	}
 	err := http.ListenAndServe(port, mux)
 	if err != nil {
-		panic(err)
+		log.Print(err)
 	}
 }
 
@@ -73,6 +75,11 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
 	log.Print(s)
+
+	if s.Token != TOKEN {
+		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
+		return
+	}
 	q := s.Text + " meme"
 
 	//googleapis query
@@ -95,16 +102,18 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ran := rand.New(rand.NewSource(time.Now().UnixNano()))
+	selected := result.Items[ran.Intn(len(result.Items))]
 
 	//post to slack
-	err = PostToSlack(result.Items[1].Link)
+	err = PostToSlack(selected.Link)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	//unecessary writing of json - for debugging
-	js, err := json.Marshal(result)
+	js, err := json.Marshal(selected.Link)
 	w.Write([]byte(js))
 
 }
@@ -116,6 +125,7 @@ func PostToSlack(body string) error {
 	if err != nil {
 		return err
 	}
+	log.Print("POSTING", body)
 	_, err = cli.Do(req)
 	if err != nil {
 		return err
