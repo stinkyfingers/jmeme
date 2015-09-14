@@ -64,16 +64,19 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Token = r.FormValue("token")
+	s.TeamID = r.FormValue("team_id")
+	s.TeamDomain = r.FormValue("team_domain")
+	s.ChannelID = r.FormValue("channel_id")
+	s.ChannelName = r.FormValue("channel_name")
+	s.UserID = r.FormValue("user_id")
+	s.UserName = r.FormValue("user_name")
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
-
 	log.Print(s)
-
-	q := s.Text
+	q := s.Text + " meme"
 
 	//googleapis query
-	// q := r.URL.Query().Get("query") + " meme"
-	// q = strings.Replace(q, " ", "+", -1)
+	q = strings.Replace(q, " ", "+", -1)
 	num := "10"
 	key := "AIzaSyCyO3v3xEKKu4SV44S-czADtjSwzp39oXM"
 	cx := "010251510427321670814:7o209j8g99y"
