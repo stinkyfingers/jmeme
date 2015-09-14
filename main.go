@@ -2,16 +2,20 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 )
 
 //custom seach CP - https://cse.google.com
+//https://jmeme.herokuapp.com/
+//token eI77YEBucKLqum63p21ADlfH
 
 const (
 	API     = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
 	CHANNEL = "testgroup"
+	TOKEN   = "eI77YEBucKLqum63p21ADlfH"
 )
 
 type Result struct {
@@ -22,6 +26,18 @@ type Item struct {
 	Title       string `json:"title"`
 	Link        string `json:"link"`
 	DisplayLink string `json:"displayLink"`
+}
+
+type SlackRequest struct {
+	Token       string `json:"token"`
+	TeamID      string `json:"team_id"`
+	TeamDomain  string `json:"team_domain"`
+	ChannelID   string `json:"channel_id"`
+	ChannelName string `json:"channel_name"`
+	UserID      string `json:"user_id"`
+	UserName    string `json:"user_name"`
+	Command     string `json:"command"`
+	Text        string `json:"text"`
 }
 
 func main() {
@@ -39,8 +55,25 @@ func main() {
 }
 
 func googleHandler(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("query") + " meme"
-	q = strings.Replace(q, " ", "+", -1)
+	//decode req body
+	var s SlackRequest
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.Token = r.FormValue("token")
+	s.Command = r.FormValue("command")
+	s.Text = r.FormValue("text")
+
+	log.Print(s)
+
+	q := s.Text
+
+	//googleapis query
+	// q := r.URL.Query().Get("query") + " meme"
+	// q = strings.Replace(q, " ", "+", -1)
 	num := "10"
 	key := "AIzaSyCyO3v3xEKKu4SV44S-czADtjSwzp39oXM"
 	cx := "010251510427321670814:7o209j8g99y"
@@ -52,6 +85,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//decode googleapis result
 	var result Result
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
@@ -59,12 +93,14 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//post to slack
 	err = PostToSlack(result.Items[1].Link)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	//unecessary writing of json - for debugging
 	js, err := json.Marshal(result)
 	w.Write([]byte(js))
 
