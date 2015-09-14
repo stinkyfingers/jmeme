@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "bytes"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -44,6 +43,14 @@ type SlackRequest struct {
 	Text        string `json:"text,omitempty"`
 }
 
+type SlackResponse struct {
+	Text      string `json:"text,omitempty"`
+	Channel   string `json:"channel,omitempty"`
+	UserName  string `json:"username,omitempty"`
+	IconUrl   string `json:"icon_url,omitempty"`
+	IconEmoji string `json:"icon_emoji,omitempty"`
+}
+
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", googleHandler)
@@ -77,7 +84,6 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	s.UserName = r.FormValue("user_name")
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
-	log.Print(s)
 
 	if s.Token != TOKEN {
 		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
@@ -109,52 +115,27 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	selected := result.Items[ran.Intn(len(result.Items))]
 
 	//post to slack
-	err = PostToSlack(selected.Link)
+	err = PostToSlack(selected.Link, s.ChannelName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	//unecessary writing of json - for debugging
-	// js, err := json.Marshal(selected.Link)
-	// w.Write([]byte(js))
 	return
-
 }
 
-func PostToSlack(body string) error {
-	// cli := &http.Client{}
-	// reader := strings.NewReader(body)
-	// req, err := http.NewRequest("POST", API+CHANNEL, reader)
-	// if err != nil {
-	// 	return err
-	// }
-	// log.Print("POSTING", body)
-	// _, err = cli.Do(req)
-	// if err != nil {
-	// 	return err
-	// }
-
+func PostToSlack(body, channel string) error {
 	cli := &http.Client{}
-	// reader := strings.NewReader(body)
 
-	// payload := struct {
-	// 	text     string `json:"text"`
-	// 	username string `json:"username"`
-	// }{
-	// 	body,
-	// 	"jmeme",
-	// }
-
-	payload := SlackRequest{
+	payload := SlackResponse{
 		Text:     body,
 		UserName: "jmeme",
+		Channel:  "#" + channel,
 	}
 	reader, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	log.Print(string(reader))
 	payloadStr := string(reader[:])
 
 	req, err := http.NewRequest("POST", WEBHOOK_URL, strings.NewReader(payloadStr))
@@ -175,7 +156,7 @@ func slackTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := r.FormValue("text")
-	err = PostToSlack(text)
+	err = PostToSlack(text, "testgroup")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
