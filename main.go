@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -15,9 +16,10 @@ import (
 //token eI77YEBucKLqum63p21ADlfH
 
 const (
-	API     = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
-	CHANNEL = "testgroup"
-	TOKEN   = "eI77YEBucKLqum63p21ADlfH"
+	API         = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
+	CHANNEL     = "testgroup"
+	WEBHOOK_URL = "https://hooks.slack.com/services/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"
+	TOKEN       = "eI77YEBucKLqum63p21ADlfH"
 )
 
 type Result struct {
@@ -120,16 +122,40 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostToSlack(body string) error {
+	// cli := &http.Client{}
+	// reader := strings.NewReader(body)
+	// req, err := http.NewRequest("POST", API+CHANNEL, reader)
+	// if err != nil {
+	// 	return err
+	// }
+	// log.Print("POSTING", body)
+	// _, err = cli.Do(req)
+	// if err != nil {
+	// 	return err
+	// }
+
 	cli := &http.Client{}
-	reader := strings.NewReader(body)
-	req, err := http.NewRequest("POST", API+CHANNEL, reader)
+	// reader := strings.NewReader(body)
+
+	payload := struct {
+		text     string
+		username string
+	}{
+		body,
+		"jmeme",
+	}
+	reader, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	log.Print("POSTING", body)
+
+	req, err := http.NewRequest("POST", WEBHOOK_URL, bytes.NewBuffer(reader))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
 	_, err = cli.Do(req)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
