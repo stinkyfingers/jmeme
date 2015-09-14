@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	// "bytes"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -33,20 +33,21 @@ type Item struct {
 }
 
 type SlackRequest struct {
-	Token       string `json:"token"`
-	TeamID      string `json:"team_id"`
-	TeamDomain  string `json:"team_domain"`
-	ChannelID   string `json:"channel_id"`
-	ChannelName string `json:"channel_name"`
-	UserID      string `json:"user_id"`
-	UserName    string `json:"user_name"`
-	Command     string `json:"command"`
-	Text        string `json:"text"`
+	Token       string `json:"token,omitempty"`
+	TeamID      string `json:"team_id,omitempty"`
+	TeamDomain  string `json:"team_domain,omitempty"`
+	ChannelID   string `json:"channel_id,omitempty"`
+	ChannelName string `json:"channel_name,omitempty"`
+	UserID      string `json:"user_id,omitempty"`
+	UserName    string `json:"user_name,omitempty"`
+	Command     string `json:"command,omitempty"`
+	Text        string `json:"text,omitempty"`
 }
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", googleHandler)
+	mux.HandleFunc("/slack", slackTest)
 
 	port := ":" + os.Getenv("PORT")
 	if port == ":" {
@@ -137,25 +138,47 @@ func PostToSlack(body string) error {
 	cli := &http.Client{}
 	// reader := strings.NewReader(body)
 
-	payload := struct {
-		text     string
-		username string
-	}{
-		body,
-		"jmeme",
+	// payload := struct {
+	// 	text     string `json:"text"`
+	// 	username string `json:"username"`
+	// }{
+	// 	body,
+	// 	"jmeme",
+	// }
+
+	payload := SlackRequest{
+		Text:     body,
+		UserName: "jmeme",
 	}
 	reader, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
+	log.Print(string(reader))
+	payloadStr := string(reader[:])
 
-	req, err := http.NewRequest("POST", WEBHOOK_URL, bytes.NewBuffer(reader))
+	req, err := http.NewRequest("POST", WEBHOOK_URL, strings.NewReader(payloadStr))
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
 	_, err = cli.Do(req)
 
 	return nil
+}
+
+func slackTest(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	text := r.FormValue("text")
+	err = PostToSlack(text)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	return
 }
