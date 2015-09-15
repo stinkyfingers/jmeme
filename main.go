@@ -15,10 +15,12 @@ import (
 //token eI77YEBucKLqum63p21ADlfH
 
 const (
-	API         = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
-	CHANNEL     = "testgroup"
-	WEBHOOK_URL = "https://hooks.slack.com/services/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"
-	TOKEN       = "eI77YEBucKLqum63p21ADlfH"
+	API          = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
+	CHANNEL      = "testgroup"
+	WEBHOOK_URL  = "https://hooks.slack.com/services/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"
+	POST_MESSAGE = "https://slack.com/api/chat.postMessage"
+	TOKEN        = "eI77YEBucKLqum63p21ADlfH"
+	AUTH_TOKEN   = "xoxp-2186757815-2399871549-10719247474-f5c9c1c450"
 )
 
 type Result struct {
@@ -49,6 +51,16 @@ type SlackResponse struct {
 	UserName  string `json:"username,omitempty"`
 	IconUrl   string `json:"icon_url,omitempty"`
 	IconEmoji string `json:"icon_emoji,omitempty"`
+}
+
+type ChatMessage struct {
+	Text      string `json:"text,omitempty"`
+	Channel   string `json:"channel,omitempty"`
+	UserName  string `json:"username,omitempty"`
+	IconUrl   string `json:"icon_url,omitempty"`
+	IconEmoji string `json:"icon_emoji,omitempty"`
+	Token     string `json:"token,omitempty"`
+	AsUser    bool   `json:"as_user,omitempty"`
 }
 
 func main() {
@@ -116,7 +128,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	selected := result.Items[ran.Intn(len(result.Items))]
 
 	//post to slack
-	err = PostToSlack(selected.Link, s.ChannelName, s.Text)
+	err = PostToSlackChat(selected.Link, s.ChannelName, s.Text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -144,6 +156,36 @@ func PostToSlack(body, channel, text string) error {
 	payloadStr := string(reader[:])
 
 	req, err := http.NewRequest("POST", WEBHOOK_URL, strings.NewReader(payloadStr))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	_, err = cli.Do(req)
+
+	return nil
+}
+
+func PostToSlackChat(body, channel, text string) error {
+	cli := &http.Client{}
+
+	payload := ChatMessage{
+		Text:     body,
+		UserName: "jmeme",
+		Channel:  "#" + channel,
+		Token:    AUTH_TOKEN,
+		AsUser:   true,
+	}
+	if payload.Channel == "#privategroup" {
+		payload.Channel = ""
+	}
+	log.Print(payload)
+	reader, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	payloadStr := string(reader[:])
+
+	req, err := http.NewRequest("POST", POST_MESSAGE, strings.NewReader(payloadStr))
 	if err != nil {
 		return err
 	}
