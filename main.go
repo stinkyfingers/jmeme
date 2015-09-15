@@ -133,6 +133,9 @@ func PostToSlack(body, channel, text string) error {
 		UserName: "jmeme",
 		Channel:  "#" + channel,
 	}
+	if payload.Channel == "#privategroup" {
+		payload.Channel = ""
+	}
 	log.Print(payload)
 	reader, err := json.Marshal(payload)
 	if err != nil {
