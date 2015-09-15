@@ -115,7 +115,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	selected := result.Items[ran.Intn(len(result.Items))]
 
 	//post to slack
-	err = PostToSlack(selected.Link, s.ChannelName)
+	err = PostToSlack(selected.Link, s.ChannelName, s.Text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -124,7 +124,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func PostToSlack(body, channel string) error {
+func PostToSlack(body, channel, text string) error {
 	cli := &http.Client{}
 
 	payload := SlackResponse{
@@ -156,7 +156,7 @@ func slackTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := r.FormValue("text")
-	err = PostToSlack(text, "testgroup")
+	err = PostToSlack(text, "testgroup", text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
