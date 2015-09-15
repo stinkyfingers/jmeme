@@ -84,6 +84,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	s.UserName = r.FormValue("user_name")
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
+	log.Print(s)
 
 	if s.Token != TOKEN {
 		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
