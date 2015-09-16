@@ -98,6 +98,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	s.UserName = r.FormValue("user_name")
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
+	log.Print(s)
 
 	if s.Token != TOKEN {
 		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
@@ -175,6 +176,7 @@ func PostToSlackChat(body, channel, text string) error {
 	data.Add("channel", channel)
 	data.Add("token", AUTH_TOKEN)
 	data.Add("as_user", "true")
+	log.Print("posting to slack chat")
 
 	req, err := http.NewRequest("POST", POST_MESSAGE, nil)
 	if err != nil {
