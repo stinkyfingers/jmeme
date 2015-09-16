@@ -16,9 +16,6 @@ import (
 
 const (
 	POST_MESSAGE = "https://slack.com/api/chat.postMessage"
-
-// TOKEN        = "eI77YEBucKLqum63p21ADlfH"
-// AUTH_TOKEN   = "xoxp-2186757815-2399871549-10719247474-f5c9c1c450"
 )
 
 var (
