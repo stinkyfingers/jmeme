@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "bytes"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -14,15 +13,17 @@ import (
 
 //custom seach CP - https://cse.google.com
 //https://jmeme.herokuapp.com/
-//token eI77YEBucKLqum63p21ADlfH
 
 const (
-	// API          = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
-	// CHANNEL      = "testgroup"
-	// WEBHOOK_URL  = "https://hooks.slack.com/services/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"
 	POST_MESSAGE = "https://slack.com/api/chat.postMessage"
-	TOKEN        = "eI77YEBucKLqum63p21ADlfH"
-	AUTH_TOKEN   = "xoxp-2186757815-2399871549-10719247474-f5c9c1c450"
+
+// TOKEN        = "eI77YEBucKLqum63p21ADlfH"
+// AUTH_TOKEN   = "xoxp-2186757815-2399871549-10719247474-f5c9c1c450"
+)
+
+var (
+	TOKEN      = os.Getenv("TOKEN")
+	AUTH_TOKEN = os.Getenv("AUTH_TOKEN")
 )
 
 type Result struct {
@@ -45,24 +46,6 @@ type SlackRequest struct {
 	UserName    string `json:"user_name,omitempty"`
 	Command     string `json:"command,omitempty"`
 	Text        string `json:"text,omitempty"`
-}
-
-type SlackResponse struct {
-	Text      string `json:"text,omitempty"`
-	Channel   string `json:"channel,omitempty"`
-	UserName  string `json:"username,omitempty"`
-	IconUrl   string `json:"icon_url,omitempty"`
-	IconEmoji string `json:"icon_emoji,omitempty"`
-}
-
-type ChatMessage struct {
-	Text      string `json:"text,omitempty"`
-	Channel   string `json:"channel,omitempty"`
-	UserName  string `json:"username,omitempty"`
-	IconUrl   string `json:"icon_url,omitempty"`
-	IconEmoji string `json:"icon_emoji,omitempty"`
-	Token     string `json:"token,omitempty"`
-	AsUser    bool   `json:"as_user,omitempty"`
 }
 
 func main() {
@@ -137,34 +120,6 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 
 	return
 }
-
-// func PostToSlack(body, channel, text string) error {
-// 	cli := &http.Client{}
-
-// 	payload := SlackResponse{
-// 		Text:     body,
-// 		UserName: "jmeme",
-// 		Channel:  "#" + channel,
-// 	}
-// 	if payload.Channel == "#privategroup" {
-// 		payload.Channel = ""
-// 	}
-// 	log.Print(payload)
-// 	reader, err := json.Marshal(payload)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	payloadStr := string(reader[:])
-
-// 	req, err := http.NewRequest("POST", WEBHOOK_URL, strings.NewReader(payloadStr))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	req.Header.Set("Content-Type", "application/json")
-// 	_, err = cli.Do(req)
-
-// 	return err
-// }
 
 func PostToSlackChat(body, channel, text string) error {
 	cli := &http.Client{}
