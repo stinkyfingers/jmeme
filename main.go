@@ -17,9 +17,9 @@ import (
 //token eI77YEBucKLqum63p21ADlfH
 
 const (
-	API          = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
-	CHANNEL      = "testgroup"
-	WEBHOOK_URL  = "https://hooks.slack.com/services/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"
+	// API          = "https://curtmfg.slack.com/services/hooks/slackbot?token=JVJ1Y9etcJyECkltRBWDZYpW&channel=%23"
+	// CHANNEL      = "testgroup"
+	// WEBHOOK_URL  = "https://hooks.slack.com/services/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"
 	POST_MESSAGE = "https://slack.com/api/chat.postMessage"
 	TOKEN        = "eI77YEBucKLqum63p21ADlfH"
 	AUTH_TOKEN   = "xoxp-2186757815-2399871549-10719247474-f5c9c1c450"
@@ -68,7 +68,7 @@ type ChatMessage struct {
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", googleHandler)
-	mux.HandleFunc("/slack", slackTest)
+	mux.HandleFunc("/test", slackTest)
 
 	port := ":" + os.Getenv("PORT")
 	if port == ":" {
@@ -98,7 +98,6 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	s.UserName = r.FormValue("user_name")
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
-	log.Print(s)
 
 	if s.Token != TOKEN {
 		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
@@ -139,44 +138,43 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func PostToSlack(body, channel, text string) error {
-	cli := &http.Client{}
+// func PostToSlack(body, channel, text string) error {
+// 	cli := &http.Client{}
 
-	payload := SlackResponse{
-		Text:     body,
-		UserName: "jmeme",
-		Channel:  "#" + channel,
-	}
-	if payload.Channel == "#privategroup" {
-		payload.Channel = ""
-	}
-	log.Print(payload)
-	reader, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	payloadStr := string(reader[:])
+// 	payload := SlackResponse{
+// 		Text:     body,
+// 		UserName: "jmeme",
+// 		Channel:  "#" + channel,
+// 	}
+// 	if payload.Channel == "#privategroup" {
+// 		payload.Channel = ""
+// 	}
+// 	log.Print(payload)
+// 	reader, err := json.Marshal(payload)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	payloadStr := string(reader[:])
 
-	req, err := http.NewRequest("POST", WEBHOOK_URL, strings.NewReader(payloadStr))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	_, err = cli.Do(req)
+// 	req, err := http.NewRequest("POST", WEBHOOK_URL, strings.NewReader(payloadStr))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	req.Header.Set("Content-Type", "application/json")
+// 	_, err = cli.Do(req)
 
-	return err
-}
+// 	return err
+// }
 
 func PostToSlackChat(body, channel, text string) error {
 	cli := &http.Client{}
 
 	data := url.Values{}
-	data.Set("text", body)
-	data.Add("username", "jmeme "+text)
+	data.Set("text", text+"\n"+body)
+	data.Add("username", "jmeme")
 	data.Add("channel", channel)
 	data.Add("token", AUTH_TOKEN)
 	data.Add("as_user", "true")
-	log.Print("posting to slack chat", data)
 
 	req, err := http.NewRequest("POST", POST_MESSAGE, nil)
 	if err != nil {
@@ -191,6 +189,7 @@ func PostToSlackChat(body, channel, text string) error {
 	return err
 }
 
+//Use for testing Slack Messaging
 func slackTest(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -200,7 +199,8 @@ func slackTest(w http.ResponseWriter, r *http.Request) {
 
 	text := r.FormValue("text")
 	channel := r.FormValue("channel")
-	err = PostToSlackChat(text, channel, text)
+	link := r.FormValue("link")
+	err = PostToSlackChat(link, channel, text)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
