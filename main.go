@@ -130,7 +130,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	selected := result.Items[ran.Intn(len(result.Items))]
 
 	//post to slack
-	err = PostToSlackChat(selected.Link, s.ChannelName, s.Text)
+	err = PostToSlackChat(selected.Link, s.ChannelID, s.Text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -176,7 +176,7 @@ func PostToSlackChat(body, channel, text string) error {
 	data.Add("channel", channel)
 	data.Add("token", AUTH_TOKEN)
 	data.Add("as_user", "true")
-	log.Print("posting to slack chat")
+	log.Print("posting to slack chat", data)
 
 	req, err := http.NewRequest("POST", POST_MESSAGE, nil)
 	if err != nil {
