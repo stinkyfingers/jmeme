@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	// "bytes"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -98,7 +98,6 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	s.UserName = r.FormValue("user_name")
 	s.Command = r.FormValue("command")
 	s.Text = r.FormValue("text")
-	log.Print(s)
 
 	if s.Token != TOKEN {
 		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
@@ -130,7 +129,7 @@ func googleHandler(w http.ResponseWriter, r *http.Request) {
 	selected := result.Items[ran.Intn(len(result.Items))]
 
 	//post to slack
-	err = PostToSlack(selected.Link, s.ChannelName, s.Text)
+	err = PostToSlackChat(selected.Link, s.ChannelName, s.Text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -170,37 +169,22 @@ func PostToSlack(body, channel, text string) error {
 func PostToSlackChat(body, channel, text string) error {
 	cli := &http.Client{}
 
-	// payload := ChatMessage{
-	// 	Text:     body,
-	// 	UserName: "jmeme",
-	// 	Channel:  channel,
-	// 	Token:    AUTH_TOKEN,
-	// 	AsUser:   true,
-	// }
-	// log.Print(payload)
-
-	// //form
-
-	// reader, err := json.Marshal(payload)
-	// if err != nil {
-	// 	return err
-	// }
-	// payloadStr := string(reader[:])
-
 	data := url.Values{}
 	data.Set("text", body)
-	data.Add("username", "jmeme")
+	data.Add("username", "jmeme "+text)
 	data.Add("channel", channel)
 	data.Add("token", AUTH_TOKEN)
 	data.Add("as_user", "true")
 
-	req, err := http.NewRequest("POST", POST_MESSAGE, bytes.NewBufferString(data.Encode()))
+	req, err := http.NewRequest("POST", POST_MESSAGE, nil)
 	if err != nil {
 		return err
 	}
+
+	req.URL.RawQuery = data.Encode()
+
 	req.Header.Set("Content-Type", "x-www-form-urlencoded")
-	wha, err := cli.Do(req)
-	log.Print("P", err, wha)
+	_, err = cli.Do(req)
 
 	return err
 }
@@ -213,8 +197,9 @@ func slackTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := r.FormValue("text")
-	err = PostToSlackChat(text, "testgroup", text)
-	log.Print("E", err)
+	channel := r.FormValue("channel")
+	err = PostToSlackChat(text, channel, text)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
