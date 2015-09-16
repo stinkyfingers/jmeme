@@ -122,7 +122,7 @@ func PostToSlackChat(body, channel, text string) error {
 	cli := &http.Client{}
 
 	data := url.Values{}
-	data.Set("text", text+"\n"+body)
+	data.Set("text", "/jmeme "+text+"\n"+body)
 	data.Add("username", "jmeme")
 	data.Add("channel", channel)
 	data.Add("token", AUTH_TOKEN)
