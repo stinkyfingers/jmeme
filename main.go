@@ -1,38 +1,40 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 )
 
 //custom seach CP - https://cse.google.com
-//https://jmeme.herokuapp.com/
-
-const (
-	POST_MESSAGE = "https://slack.com/api/chat.postMessage"
-)
 
 var (
-	TOKEN      = os.Getenv("TOKEN")
-	AUTH_TOKEN = os.Getenv("AUTH_TOKEN")
+	verificationToken = os.Getenv("VERIFICATION_TOKEN") // used to verify request came from Slack
+	authToken         = os.Getenv("AUTH_TOKEN")         // used for slack API calls
+	slackHookURL      = os.Getenv("SLACK_HOOK_URL")     // url for (optional) Slack hook
+	googleAPIKey      = os.Getenv("GOOGLE_API_KEY")     // API key for google custom search
+	port              = ":" + os.Getenv("PORT")
 )
 
+// Result represents the GoogleAPIs image search result
 type Result struct {
 	Items []Item `json:"items"`
 }
 
+// Item represents a GoogleAPIs image item
 type Item struct {
 	Title       string `json:"title"`
 	Link        string `json:"link"`
 	DisplayLink string `json:"displayLink"`
 }
 
+// SlackRequest resprents the form data received from a slack slash command integration
 type SlackRequest struct {
 	Token       string `json:"token,omitempty"`
 	TeamID      string `json:"team_id,omitempty"`
@@ -43,120 +45,159 @@ type SlackRequest struct {
 	UserName    string `json:"user_name,omitempty"`
 	Command     string `json:"command,omitempty"`
 	Text        string `json:"text,omitempty"`
+	ResponseURL string `json:"response_url,omitempty"`
+	TriggerID   string `json:"trigger_id,omitempty"`
+}
+
+// Data represents outbound Slack post data
+type Data struct {
+	Channel     string       `json:"channel"`
+	Scope       string       `json:"scope"`
+	Attachments []Attachment `json:"attachments"`
+}
+
+// Attachment represents the needed fields for a Data attachment
+type Attachment struct {
+	Pretext  string `json:"pretext"`
+	ImageURL string `json:"image_url"`
 }
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", googleHandler)
-	mux.HandleFunc("/test", slackTest)
+	mux.HandleFunc("/test", handler)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		log.Print("health called")
+		_, err := w.Write([]byte("OK"))
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+	})
 
-	port := ":" + os.Getenv("PORT")
 	if port == ":" {
 		port = ":9090"
 	}
-	err := http.ListenAndServe(port, mux)
-	if err != nil {
-		log.Print(err)
-	}
+	log.Fatal(http.ListenAndServe(port, mux))
 }
 
-func googleHandler(w http.ResponseWriter, r *http.Request) {
-	//decode req body
-	var s SlackRequest
-	err := r.ParseForm()
+//Use for testing Slack Messaging
+func handler(w http.ResponseWriter, r *http.Request) {
+	s, err := parseForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	s.Token = r.FormValue("token")
-	s.TeamID = r.FormValue("team_id")
-	s.TeamDomain = r.FormValue("team_domain")
-	s.ChannelID = r.FormValue("channel_id")
-	s.ChannelName = r.FormValue("channel_name")
-	s.UserID = r.FormValue("user_id")
-	s.UserName = r.FormValue("user_name")
-	s.Command = r.FormValue("command")
-	s.Text = r.FormValue("text")
-
-	if s.Token != TOKEN {
+	if s.Token != verificationToken {
 		http.Error(w, "No/Incorrect Token", http.StatusUnauthorized)
 		return
 	}
-	q := s.Text + " meme"
 
-	//googleapis query
-	q = strings.Replace(q, " ", "+", -1)
-	num := "10"
-	key := "AIzaSyCyO3v3xEKKu4SV44S-czADtjSwzp39oXM"
-	cx := "010251510427321670814:7o209j8g99y"
-	url := "https://www.googleapis.com/customsearch/v1?key=" + key + "&cx=" + cx + "&num=" + num + "&q=" + q + "&searchType=image&source=lnms"
-
-	resp, err := http.Get(url)
+	link, err := googleMeme(s.Text)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	err = slackSendMessage(link, s.ChannelID, s.Text)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func parseForm(r *http.Request) (*SlackRequest, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return nil, err
+	}
+	return &SlackRequest{
+		Token:       r.Form.Get("token"),
+		TeamID:      r.Form.Get("team_id"),
+		TeamDomain:  r.Form.Get("team_domain"),
+		ChannelID:   r.Form.Get("channel_id"),
+		ChannelName: r.Form.Get("channel_name"),
+		Command:     r.Form.Get("command"),
+		ResponseURL: r.Form.Get("response_url"),
+		Text:        r.Form.Get("text"),
+		TriggerID:   r.Form.Get("trigger_id"),
+		UserID:      r.Form.Get("user_id"),
+		UserName:    r.Form.Get("user_name"),
+	}, nil
+}
+
+func googleMeme(text string) (string, error) {
+	//googleapis query
+	query := url.PathEscape(text + " meme")
+	num := 10
+	cx := "010251510427321670814:7o209j8g99y"
+	url := fmt.Sprintf("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&num=%d&q=%s&searchType=image&source=lnms", googleAPIKey, cx, num, query)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
 	}
 
 	//decode googleapis result
 	var result Result
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 	ran := rand.New(rand.NewSource(time.Now().UnixNano()))
 	selected := result.Items[ran.Intn(len(result.Items))]
-
-	//post to slack
-	err = PostToSlackChat(selected.Link, s.ChannelID, s.Text)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	return
+	return selected.Link, nil
 }
 
-func PostToSlackChat(body, channel, text string) error {
-	cli := &http.Client{}
+// send message to Slack via webhook
+func slackPostMessage(link, channelID, text string) error {
+	d := Data{
+		Channel: channelID,
+		Attachments: []Attachment{{
+			Pretext:  text,
+			ImageURL: link,
+		}},
+	}
 
-	data := url.Values{}
-	data.Set("text", "/jmeme "+text+"\n"+body)
-	data.Add("username", "jmeme")
-	data.Add("channel", channel)
-	data.Add("token", AUTH_TOKEN)
-	data.Add("as_user", "true")
-
-	req, err := http.NewRequest("POST", POST_MESSAGE, nil)
+	j, err := json.Marshal(d)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", slackHookURL, bytes.NewReader(j))
 	if err != nil {
 		return err
 	}
 
-	req.URL.RawQuery = data.Encode()
-
-	req.Header.Set("Content-Type", "x-www-form-urlencoded")
+	req.Header.Add("Content-Type", "application/json")
+	cli := &http.Client{}
 	_, err = cli.Do(req)
-
 	return err
 }
 
-//Use for testing Slack Messaging
-func slackTest(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+// send message to Slack via chat.sendMessage API endpoint
+func slackSendMessage(link, channelID, text string) error {
+	slackPostURL := "https://slack.com/api/chat.postMessage"
+	d := Data{
+		Channel: channelID,
+		Scope:   "chat:write:user",
+		Attachments: []Attachment{{
+			Pretext:  text,
+			ImageURL: link,
+		}},
 	}
 
-	text := r.FormValue("text")
-	channel := r.FormValue("channel")
-	link := r.FormValue("link")
-	err = PostToSlackChat(link, channel, text)
-
+	j, err := json.Marshal(d)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
-	return
+	req, err := http.NewRequest("POST", slackPostURL, bytes.NewReader(j))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authToken))
+	cli := &http.Client{}
+	_, err = cli.Do(req)
+	return err
 }
