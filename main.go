@@ -10,6 +10,9 @@ import (
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/stinkyfingers/lambdify"
 )
 
 //custom seach CP - https://cse.google.com
@@ -19,7 +22,6 @@ var (
 	authToken         = os.Getenv("AUTH_TOKEN")         // used for slack API calls
 	slackHookURL      = os.Getenv("SLACK_HOOK_URL")     // url for (optional) Slack hook
 	googleAPIKey      = os.Getenv("GOOGLE_API_KEY")     // API key for google custom search
-	port              = ":" + os.Getenv("PORT")
 )
 
 // Result represents the GoogleAPIs image search result
@@ -63,8 +65,13 @@ type Attachment struct {
 }
 
 func main() {
+	lambdaFunction := lambdify.Lambdify(mux())
+	lambda.Start(lambdaFunction)
+}
+
+func mux() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/test", handler)
+	mux.HandleFunc("/meme", handler)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		log.Print("health called")
 		_, err := w.Write([]byte("OK"))
@@ -73,11 +80,7 @@ func main() {
 			return
 		}
 	})
-
-	if port == ":" {
-		port = ":9090"
-	}
-	log.Fatal(http.ListenAndServe(port, mux))
+	return mux
 }
 
 //Use for testing Slack Messaging

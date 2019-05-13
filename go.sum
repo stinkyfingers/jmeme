@@ -1,0 +1,6 @@
+github.com/aws/aws-lambda-go v1.10.0 h1:uafgdfYGQD0UeT7d2uKdyWW8j/ZYRifRPIdmeqLzLCk=
+github.com/aws/aws-lambda-go v1.10.0/go.mod h1:zUsUQhAUjYzR8AuduJPCfhBuKWUaDbQiPOG+ouzmE1A=
+github.com/stinkyfingers/lambdify v0.0.0-20190512222142-d185cbd91b0c h1:N4uWKpnpJnx3v59GOUvlhh7O2UJQzPyaHwLalcC2VG8=
+github.com/stinkyfingers/lambdify v0.0.0-20190512222142-d185cbd91b0c/go.mod h1:0V8Rspu2x83fZZva4oIqWLtg2QNdoEjFoXyUwO19q08=
+github.com/stinkyfingers/lambdify v0.0.0-20190513143324-bc27721f430d h1:lpmxqbBV290GaO5CDvwixVwePsQwqLyGILNtOEGMrVQ=
+github.com/stinkyfingers/lambdify v0.0.0-20190513143324-bc27721f430d/go.mod h1:DGLE9cr0ZkVkBc2/PvhB9zmrswvi1D4KZIobMHfU9kk=
